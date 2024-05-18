@@ -48,7 +48,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: nodejsapp
-          image: ${{ steps.build-image.outputs.image }}
+          image: ${{ steps.build-image.outputs.image }} # Provide the image from the build step
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1

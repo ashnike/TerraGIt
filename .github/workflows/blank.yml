@@ -7,8 +7,6 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      IMAGE_URL: ${{ steps.build-image.outputs.image }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
@@ -36,7 +34,7 @@ jobs:
           echo "IMAGE_TAG: $IMAGE_TAG"
           docker build -t $ECR_REPO_URL:$IMAGE_TAG -f app/Dockerfile app/.
           docker push $ECR_REPO_URL:$IMAGE_TAG
-          echo "IMAGE_URL=$ECR_REPO_URL:$IMAGE_TAG" >> $GITHUB_ENV
+          echo "::set-env name=IMAGE_URL::$ECR_REPO_URL:$IMAGE_TAG" # Set IMAGE_URL environment variable
 
       - name: Download task definition
         run: |
@@ -50,7 +48,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: nodejsapp
-          image: ${{ env.IMAGE_URL }} # Use the IMAGE_URL environment variable
+          image: ${{ env.IMAGE_URL }} # Access IMAGE_URL environment variable
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1

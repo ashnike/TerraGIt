@@ -7,34 +7,29 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      ECR_REPO_URL: ${{ secrets.ECR_REPO_URL }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
+        run: aws configure set aws_access_key_id ${{ env.AWS_ACCESS_KEY_ID }} && aws configure set aws_secret_access_key ${{ env.AWS_SECRET_ACCESS_KEY }} && aws configure set default.region ${{ env.AWS_REGION }}
+        
       - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: 'true'
+        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REPO_URL }}
 
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
-        env:
-          ECR_REPO_URL: ${{ secrets.ECR_REPO_URL }}
-          IMAGE_TAG: latest
         run: |
-          echo "ECR_REPO_URL: $ECR_REPO_URL"
+          IMAGE_TAG=latest
           echo "IMAGE_TAG: $IMAGE_TAG"
-          docker build -t $ECR_REPO_URL:$IMAGE_TAG -f app/Dockerfile app/.
-          docker push $ECR_REPO_URL:$IMAGE_TAG
-          echo "::set-env name=IMAGE_URL::$ECR_REPO_URL:$IMAGE_TAG" # Set IMAGE_URL environment variable
+          docker build -t ${{ env.ECR_REPO_URL }}:$IMAGE_TAG -f app/Dockerfile app/.
+          docker push ${{ env.ECR_REPO_URL }}:$IMAGE_TAG
+          echo "IMAGE_URL=${{ env.ECR_REPO_URL }}:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Download task definition
         run: |
@@ -48,7 +43,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: nodejsapp
-          image: ${{ env.IMAGE_URL }} # Access IMAGE_URL environment variable
+          image: ${{ env.IMAGE_URL }}
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1

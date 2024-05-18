@@ -34,13 +34,19 @@ jobs:
           echo "IMAGE_TAG: $IMAGE_TAG"
           docker build -t $ECR_REPO_URL:$IMAGE_TAG -f app/Dockerfile app/.
           docker push $ECR_REPO_URL:$IMAGE_TAG
-          echo "image=$ECR_REPO_URL:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image=$ECR_REPO_URL:$IMAGE_TAG" >> $GITHUB_ENV
        
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition nodejs-app-task \
+            --query taskDefinition > task-definition.json
+
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: nodejs-app-task
+          task-definition: task-definition.json
           container-name: nodejsapp
           image: ${{ steps.build-image.outputs.image }}
 

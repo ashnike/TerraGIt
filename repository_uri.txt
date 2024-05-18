@@ -1,0 +1,1 @@
+992382754582.dkr.ecr.us-east-1.amazonaws.com/nodejsrepo
